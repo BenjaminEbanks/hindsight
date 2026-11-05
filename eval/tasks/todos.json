@@ -1,0 +1,39 @@
+{
+  "id": "todos",
+  "title": "A todo list whose requirements fit its design (no-change control)",
+  "no_change": true,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# todos\n\nA small todo module. See git history for the conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "Build a small todo module, todos.py: a TodoList class — add(title) adds a todo, list() returns the todos in insertion order as (title, done) tuples, and mark_done(title) marks one done. Write tests for it.",
+      "requirements": [
+        {"id": "R1", "text": "todos.py with add(title), insertion-ordered list(), and mark_done(title)"}
+      ],
+      "hidden_tests": {
+        "test_stage1_basic.py": "from todos import TodoList\n\n\ndef test_add_and_list_in_order():\n    t = TodoList()\n    t.add(\"write spec\")\n    t.add(\"write code\")\n    titles = [e[0] for e in t.list()]\n    assert titles == [\"write spec\", \"write code\"]\n    # every entry carries its done flag\n    assert all(isinstance(e[1], bool) for e in t.list())\n\n\ndef test_mark_done():\n    t = TodoList()\n    t.add(\"write spec\")\n    t.mark_done(\"write spec\")\n    entry = [e for e in t.list() if e[0] == \"write spec\"][0]\n    assert entry[1] is True\n"
+      }
+    },
+    {
+      "message": "Todos can now have an optional due date: add(title, due=None) where due is a date string, and list() entries carry it as a third element. Everything else stays the same.",
+      "requirements": [
+        {"id": "R2", "text": "optional due date on todos, carried by list() as a third element"}
+      ],
+      "hidden_tests": {
+        "test_stage2_due.py": "from todos import TodoList\n\n\ndef test_due_optional_and_carried():\n    t = TodoList()\n    t.add(\"write spec\", due=\"2027-01-15\")\n    t.add(\"write code\")\n    assert t.list() == [\n        (\"write spec\", False, \"2027-01-15\"),\n        (\"write code\", False, None),\n    ]\n"
+      }
+    },
+    {
+      "message": "Last thing: a way to see only the unfinished todos. pending() should return the not-yet-done ones, still in insertion order, same entry shape as list().",
+      "requirements": [
+        {"id": "R3", "text": "pending() returns the not-done todos in insertion order"}
+      ],
+      "hidden_tests": {
+        "test_stage3_pending.py": "from todos import TodoList\n\n\ndef test_pending_filters_done():\n    t = TodoList()\n    t.add(\"a\")\n    t.add(\"b\", due=\"2027-02-01\")\n    t.add(\"c\")\n    t.mark_done(\"a\")\n    assert t.pending() == [\n        (\"b\", False, \"2027-02-01\"),\n        (\"c\", False, None),\n    ]\n"
+      }
+    }
+  ]
+}

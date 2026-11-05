@@ -1,0 +1,37 @@
+{
+  "id": "settings",
+  "title": "A settings module that outgrows its hardcoded defaults",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# service settings\n\nConfiguration for the internal service. See git history for the conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "Build a settings module for our Python service: config.py with a load_settings() function that returns an object with attributes .host (a string), .port (an int), and .timeout (int seconds). Defaults for now: host 0.0.0.0, port 8080, timeout 30. Write tests for it.",
+      "requirements": [
+        {"id": "R1", "text": "load_settings() in config.py returns .host, .port, .timeout with defaults 0.0.0.0 / 8080 / 30"}
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Deployment needs to override everything through environment variables: APP_HOST, APP_PORT, APP_TIMEOUT. Values should be converted to the right type (APP_PORT and APP_TIMEOUT are ints). Environment variables we don't know about, like APP_FOO, should just be ignored. Keep load_settings() with no required arguments.",
+      "requirements": [
+        {"id": "R2", "text": "every setting is overridable via APP_HOST / APP_PORT / APP_TIMEOUT environment variables with type conversion; unknown APP_ variables are ignored"}
+      ],
+      "hidden_tests": {
+        "test_stage2_env.py": "from config import load_settings\n\n\ndef test_defaults(monkeypatch):\n    for k in (\"APP_HOST\", \"APP_PORT\", \"APP_TIMEOUT\"):\n        monkeypatch.delenv(k, raising=False)\n    s = load_settings()\n    assert s.host == \"0.0.0.0\"\n    assert s.port == 8080\n    assert s.timeout == 30\n\n\ndef test_env_override(monkeypatch):\n    monkeypatch.setenv(\"APP_HOST\", \"127.0.0.1\")\n    monkeypatch.setenv(\"APP_PORT\", \"9000\")\n    monkeypatch.setenv(\"APP_TIMEOUT\", \"5\")\n    s = load_settings()\n    assert s.host == \"127.0.0.1\"\n    assert s.port == 9000\n    assert s.timeout == 5\n    assert isinstance(s.port, int) and isinstance(s.timeout, int)\n\n\ndef test_unknown_env_ignored(monkeypatch):\n    monkeypatch.setenv(\"APP_FOO\", \"whatever\")\n    s = load_settings()  # must not raise\n    assert s.port == 8080\n"
+      }
+    },
+    {
+      "message": "We got burned by a bad deploy: invalid values must fail fast at load time with a clear error. APP_PORT='abc' or APP_TIMEOUT='-5' should raise a ConfigurationError (define it in config.py) whose message names the offending field. Same for APP_PORT='99999' (out of the valid port range) if that's easy.",
+      "requirements": [
+        {"id": "R3", "text": "invalid APP_ values raise ConfigurationError at load time, with the field named in the message"}
+      ],
+      "hidden_tests": {
+        "test_stage3_validation.py": "import pytest\nfrom config import ConfigurationError, load_settings\n\n\ndef test_bad_port_raises(monkeypatch):\n    monkeypatch.setenv(\"APP_PORT\", \"abc\")\n    with pytest.raises(ConfigurationError) as e:\n        load_settings()\n    assert \"port\" in str(e.value).lower()\n\n\ndef test_negative_timeout_raises(monkeypatch):\n    monkeypatch.setenv(\"APP_TIMEOUT\", \"-5\")\n    with pytest.raises(ConfigurationError) as e:\n        load_settings()\n    assert \"timeout\" in str(e.value).lower()\n\n\ndef test_out_of_range_port_raises(monkeypatch):\n    monkeypatch.setenv(\"APP_PORT\", \"99999\")\n    with pytest.raises(ConfigurationError):\n        load_settings()\n"
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "importer",
+  "title": "An importer that outgrows its run-to-completion design",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# importer\n\nRow importer. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "importer.py: an Importer that takes a list of rows and an on_item callback. run() goes through the rows, calls on_item(row) for each one, and returns how many it processed. Tests please.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Importer(rows, on_item): run() calls on_item(row) per row and returns the count"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Big files hang the app when someone navigates away mid-import. We need to be able to cancel: a cancel() that makes run() stop calling on_item and return promptly with however many it got through.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "cancel() stops an in-flight run() promptly; run() returns the partial count"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_cancel.py": "import threading\nimport time\n\nfrom importer import Importer\n\n\ndef test_cancel_stops_the_run_promptly():\n    consumed = []\n\n    def on_item(row):\n        consumed.append(row)\n        time.sleep(0.001)\n\n    job = Importer(list(range(2000)), on_item)\n    t = threading.Thread(target=job.run)\n    t.start()\n    time.sleep(0.05)\n    job.cancel()\n    t.join(timeout=2.0)\n    assert not t.is_alive(), \"run() kept going after cancel()\"\n    assert len(consumed) < 2000, (\n        f\"consumed all {len(consumed)} rows anyway\")\n"
+      }
+    },
+    {
+      "message": "Two small things: after a cancelled run we just call run() again on the same importer for a fresh pass over the rows, and a status() so the UI can show 'never run', 'running', 'cancelled' or 'completed'.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "run() is restartable after a cancel; status() reports never run / running / cancelled / completed"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_status.py": "import threading\nimport time\n\nfrom importer import Importer\n\n\ndef test_status_and_restart_after_cancel():\n    seen = []\n\n    def on_item(row):\n        seen.append(row)\n        time.sleep(0.001)\n\n    job = Importer(list(range(500)), on_item)\n    assert job.status() == \"never run\"\n    t = threading.Thread(target=job.run)\n    t.start()\n    time.sleep(0.02)\n    job.cancel()\n    t.join(timeout=2.0)\n    assert not t.is_alive()\n    assert job.status() == \"cancelled\"\n    n_before = len(seen)\n    assert 0 < n_before < 500\n\n    total = job.run()  # a cancelled job can simply be run again\n    assert total == 500\n    assert len(seen) == n_before + 500\n    assert job.status() == \"completed\"\n"
+      }
+    }
+  ]
+}

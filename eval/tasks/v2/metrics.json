@@ -1,0 +1,46 @@
+{
+  "id": "metrics",
+  "title": "A metrics module that outgrows its module-global counters",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# metrics\n\nLittle metrics module. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "A tiny metrics module, metrics.py: inc(name) bumps a counter and get(name) reads it (0 for a counter nobody has bumped). No need for a class or anything \u2014 we just import the module wherever we need it. Write tests.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "metrics.py with module-level inc(name) / get(name)"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "I know I said no class needed, but the new test harness wants isolated metric sets so tests don't bleed into each other. A Metrics class with the same inc/get would do it \u2014 and keep the module-level inc/get working too, old callers still use those.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "a Metrics class with inc/get; instances are isolated from each other; module-level inc/get keep working on a default instance"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_instances.py": "import metrics\nfrom metrics import Metrics\n\n\ndef test_instances_are_isolated():\n    a = Metrics()\n    b = Metrics()\n    a.inc(\"hits\")\n    b.inc(\"hits\")\n    b.inc(\"hits\")\n    assert a.get(\"hits\") == 1\n    assert b.get(\"hits\") == 2\n    assert Metrics().get(\"hits\") == 0\n\n\ndef test_module_level_still_works_and_is_its_own_instance():\n    metrics.inc(\"boot\")\n    metrics.inc(\"boot\")\n    assert metrics.get(\"boot\") == 2\n    assert Metrics().get(\"boot\") == 0  # not shared with fresh instances\n"
+      }
+    },
+    {
+      "message": "The web folks want Prometheus-style labels now: inc('requests', labels={'path': '/a'}). The same label set counts separately, no labels is its own series, and get without labels returns the total across the label sets.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "inc/get accept labels; each label set is a separate series; get without labels returns the total"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_labels.py": "from metrics import Metrics\n\n\ndef test_labeled_series_count_separately():\n    m = Metrics()\n    m.inc(\"requests\", labels={\"path\": \"/a\"})\n    m.inc(\"requests\", labels={\"path\": \"/a\"})\n    m.inc(\"requests\", labels={\"path\": \"/b\"})\n    m.inc(\"requests\")\n    assert m.get(\"requests\") == 4\n    assert m.get(\"requests\", labels={\"path\": \"/a\"}) == 2\n    assert m.get(\"requests\", labels={\"path\": \"/b\"}) == 1\n    assert m.get(\"requests\", labels={\"path\": \"/c\"}) == 0\n\n\ndef test_unknown_counters_are_zero():\n    m = Metrics()\n    assert m.get(\"nope\") == 0\n    assert m.get(\"nope\", labels={\"a\": \"1\"}) == 0\n"
+      }
+    }
+  ]
+}

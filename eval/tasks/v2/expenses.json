@@ -1,0 +1,46 @@
+{
+  "id": "expenses",
+  "title": "An expense log that only kept the totals",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# expenses\n\nTeam expense log. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "Small expense tracker for the team, expenses.py: an ExpenseLog class \u2014 log.record(category, amount) logs a purchase, log.total(category) gives the running total for a category, log.categories() returns a list of them. Keep it light, it's just for the monthly report. Tests please.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "expenses.py with an ExpenseLog class: record(category, amount), total(category), categories()"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Finance wants to see the actual purchases behind the numbers, not just totals. entries(category) should return a list of the individual amounts in the order they were recorded, and an empty list for a category with no purchases. record() and total() stay as they are.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "entries(category) lists the recorded amounts per category in order"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_entries.py": "from expenses import ExpenseLog\n\n\ndef test_entries_list_individual_purchases():\n    log = ExpenseLog()\n    log.record(\"food\", 12.50)\n    log.record(\"food\", 8.00)\n    log.record(\"travel\", 120)\n    assert log.entries(\"food\") == [12.50, 8.00]\n    assert log.entries(\"travel\") == [120]\n    assert log.entries(\"nothing\") == []\n    assert log.total(\"food\") == 20.50\n"
+      }
+    },
+    {
+      "message": "Turns out we double-charge people sometimes. Two things: undo(category) takes back the most recent purchase in that category, and remove(category, index) drops a specific one. Totals have to stay right of course.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "undo(category) removes the latest entry and remove(category, index) a specific one; totals reflect removals"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_undo.py": "from expenses import ExpenseLog\n\n\ndef test_undo_takes_back_last_purchase():\n    log = ExpenseLog()\n    log.record(\"food\", 10)\n    log.record(\"food\", 20)\n    log.record(\"travel\", 5)\n    log.undo(\"food\")\n    assert log.entries(\"food\") == [10]\n    assert log.total(\"food\") == 10\n    assert log.total(\"travel\") == 5\n\n\ndef test_remove_drops_a_specific_purchase():\n    log = ExpenseLog()\n    log.record(\"food\", 10)\n    log.record(\"food\", 20)\n    log.record(\"food\", 7)\n    log.remove(\"food\", 1)\n    assert log.entries(\"food\") == [10, 7]\n    assert log.total(\"food\") == 17\n    log.undo(\"food\")\n    assert log.entries(\"food\") == [10]\n    assert log.categories() == [\"food\"]\n    assert log.total(\"food\") == 10\n"
+      }
+    }
+  ]
+}

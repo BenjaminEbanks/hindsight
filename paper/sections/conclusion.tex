@@ -1,0 +1,11 @@
+\section{Conclusion and Final Reflection}
+\label{sec:conclusion}
+
+\paragraph{Making use of the tools available.}
+This project was really my first time working with open-source models and an open-source harness. They weren't as intelligent as the frontier models I was used to, but they were a lot cheaper, so I could delegate longer tasks to them and run things overnight. Working with Sailboxes taught me something similar. They made it cheap to run many isolated workers, but I had to learn how they fail, from boxes left running when a process was killed partway through creating them, to limits on reserved CPU that stopped workers while actual usage was close to nothing. Any project is going to have constraints, and a big part of my learning is to continue to discover how to best use the tools available for any given task.
+
+\paragraph{Simplicity versus complexity.}
+As I designed the system, I thought very deeply about the best user experience, and there were a million edge cases to consider. When does it make sense to alert the user? Should I alert the user or the agent? Should there be a minimum number of turns before sharing a design? Should multiple background processes run at the same time? Should the orchestrator run in a Sailbox or on my computer? The list goes on. The more edge cases I fit to, the more complex the system became and the better it could adapt to what real users might do, but the law of unintended consequences holds strong: you fix one thing and you might end up breaking thirty others. I don't think there is a perfect middle point between the two extremes, and it's something any great product has to confront.
+
+\paragraph{Letting the data decide.}
+This is a lesson I learned from my first manager at Databricks, and it comes back to me in almost every project I do. Perfect decisions and designs don't exist, and whether a design sticks is tied to user bias and all sorts of other things, so one of the most defensible things you can do when designing any system is let the data decide. In this project, that meant testing different prompt variations on real coding problems and tracking the spend and time of evaluation runs, and it's something I will continue to think about as I build more products in the future.

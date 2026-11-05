@@ -1,0 +1,37 @@
+{
+  "id": "counters",
+  "title": "A counter service that outgrows its single-process design",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# counter service\n\nInternal tool. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "Build me a counter service in Python. It's a small internal tool for now, a single process will be using it. I want a Counter class in counter.py with increment() and get_value(), and please write tests for it.",
+      "requirements": [
+        {"id": "R1", "text": "a Counter class in counter.py with increment() and get_value(), covered by tests"}
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Update: we're scaling out. The app now runs as three separate processes on the same machine, and they all need to see the same counter values. Keep the Counter class and its methods the same, and keep it simple: where the state lives is up to you, but read its location from the COUNTER_STORE environment variable so ops can point it at a shared disk.",
+      "requirements": [
+        {"id": "R2", "text": "counter state is shared across processes via the COUNTER_STORE environment variable location"}
+      ],
+      "hidden_tests": {
+        "test_stage2_shared.py": "import os\nimport subprocess\nimport sys\nimport tempfile\n\nSNIPPET = (\n    \"from counter import Counter\\n\"\n    \"c = Counter()\\n\"\n    \"c.increment()\\n\"\n    \"c.increment()\\n\"\n    \"print(c.get_value())\\n\"\n)\n\n\ndef _run(store):\n    env = {**os.environ, \"COUNTER_STORE\": store}\n    r = subprocess.run([sys.executable, \"-c\", SNIPPET],\n                       capture_output=True, text=True, env=env)\n    assert r.returncode == 0, r.stderr\n    return r.stdout.strip()\n\n\ndef test_counter_is_shared_across_processes():\n    store = os.path.join(tempfile.mkdtemp(), \"state\")\n    first = _run(store)\n    assert first == \"2\", f\"first process saw {first!r}\"\n    second = _run(store)\n    assert second == \"4\", (\n        f\"second process saw {second!r} -- state is not shared\")\n"
+      }
+    },
+    {
+      "message": "One more thing from ops: the counter must survive service restarts. If the process dies and comes back up, the count continues from where it left off. Same interface as before.",
+      "requirements": [
+        {"id": "R3", "text": "counter state persists across process restarts"}
+      ],
+      "hidden_tests": {
+        "test_stage3_restart.py": "import os\nimport subprocess\nimport sys\nimport tempfile\n\nINC3 = (\n    \"from counter import Counter\\n\"\n    \"c = Counter()\\n\"\n    \"for _ in range(3):\\n\"\n    \"    c.increment()\\n\"\n    \"print(c.get_value())\\n\"\n)\nINC1 = (\n    \"from counter import Counter\\n\"\n    \"c = Counter()\\n\"\n    \"c.increment()\\n\"\n    \"print(c.get_value())\\n\"\n)\n\n\ndef _run(snippet, store):\n    env = {**os.environ, \"COUNTER_STORE\": store}\n    r = subprocess.run([sys.executable, \"-c\", snippet],\n                       capture_output=True, text=True, env=env)\n    assert r.returncode == 0, r.stderr\n    return r.stdout.strip()\n\n\ndef test_counter_survives_restart():\n    store = os.path.join(tempfile.mkdtemp(), \"state\")\n    before = _run(INC3, store)\n    assert before == \"3\", f\"before restart saw {before!r}\"\n    after = _run(INC1, store)\n    assert after == \"4\", (\n        f\"after restart saw {after!r} -- state did not persist\")\n"
+      }
+    }
+  ]
+}

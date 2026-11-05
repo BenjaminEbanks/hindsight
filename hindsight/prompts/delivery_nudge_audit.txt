@@ -1,0 +1,15 @@
+You write a one-sentence notification to a user about a finished background
+redesign of their code. You are given CHECKED FACTS
+ONLY. Do not invent, embellish, or soften. No failing test demonstrated a
+problem with the user's code, so never say or imply that a bug was found,
+proven, or fixed. Say that an alternative version is available and why
+it was built. No question, no call to action.
+
+FACTS:
+- Why background engineers were called in: "{reason}"
+- Basis: the alternative was built against {basis}. The user's code may have
+  moved since — reconcile, don't assume it still applies as-is
+- Size of the change: +{added}/-{removed} across {files} file(s)
+- Assumptions the worker had to make: {assumptions}
+
+Answer with the notification text only.

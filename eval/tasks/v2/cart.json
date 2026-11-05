@@ -1,0 +1,48 @@
+{
+  "id": "cart",
+  "title": "A shopping cart whose requirements fit its design (no-change control)",
+  "no_change": true,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# cart\n\nStorefront cart. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "cart.py: a Cart for the storefront \u2014 add(sku, price, qty=1), items() as (sku, price, qty) tuples, and total(). Write tests.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Cart with add(sku, price, qty=1), items() as (sku, price, qty) tuples, total()"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage1_basics.py": "from cart import Cart\n\n\ndef test_add_items_and_total():\n    c = Cart()\n    c.add(\"mug\", 8.00)\n    c.add(\"desk\", 350.00, qty=2)\n    assert c.items() == [(\"mug\", 8.00, 1), (\"desk\", 350.00, 2)]\n    assert c.total() == 708.00\n"
+      }
+    },
+    {
+      "message": "Shoppers want to take things out: remove(sku) drops every line with that sku, and the total adjusts.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "remove(sku) drops all lines for a sku; total reflects it"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_remove.py": "from cart import Cart\n\n\ndef test_remove_drops_every_line_for_sku():\n    c = Cart()\n    c.add(\"mug\", 8.00)\n    c.add(\"mug\", 8.00, qty=3)\n    c.add(\"desk\", 350.00)\n    c.remove(\"mug\")\n    assert c.items() == [(\"desk\", 350.00, 1)]\n    assert c.total() == 350.00\n"
+      }
+    },
+    {
+      "message": "Hooking this into the new checkout: apply_discount(percent) takes the percent off every line's unit price, and most_expensive() returns the sku of the priciest line (price times qty).",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "apply_discount(percent) discounts all unit prices; most_expensive() returns the sku of the highest line total"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_discount.py": "from cart import Cart\n\n\ndef test_discount_applies_to_every_line():\n    c = Cart()\n    c.add(\"mug\", 10.00, qty=2)\n    c.add(\"desk\", 300.00)\n    c.add(\"chair\", 175.00, qty=2)\n    assert c.most_expensive() == \"chair\"  # 350 beats 300\n    c.apply_discount(20)\n    assert c.items()[0] == (\"mug\", 8.00, 2)\n    assert c.total() == 536.00  # 16 + 240 + 280\n    c.remove(\"chair\")\n    assert c.most_expensive() == \"desk\"\n"
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+A user has been working with a coding agent, one request at a time, so the code's early
+decisions were made without knowing what the user would ask for later. Background
+engineers will now each rebuild this code in a different way. Choose what they build.
+
+WHAT THE USER SAID, verbatim and in order:
+{user_messages}
+
+WHAT PROMPTED THIS:
+{reason}
+
+THE CODE:
+{code}
+
+Name between 2 and 5 directions a strong engineer would seriously consider if they were
+starting over, knowing every request above.
+
+- Each must be a different structure: a different way to divide the code, hold its
+  state or model its data. Different names for the same structure don't count, and
+  neither do bug fixes, tests or style.
+- Be concrete about this code: name the main parts, where state lives and what moves
+  where.
+- Name only as many as are genuinely different. Two good directions beat five padded
+  ones.
+- Keep anything the user's messages fix, such as a file they named, an entry point, a
+  command or an interface. Choose among structures that fit within those.
+- Don't add requirements the user didn't ask for, and don't add layers their requests
+  don't need.
+- Don't judge whether a redesign is worthwhile. Someone else decides that after seeing
+  the results. That the code already works isn't a reason to name fewer.
+
+Answer with JSON only:
+{"directions": [{"name": "a few words", "structure": "2 to 4 sentences: what the code would look like", "why": "which of the user's requests this serves best"}]}

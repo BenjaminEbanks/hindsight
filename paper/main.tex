@@ -1,0 +1,50 @@
+\documentclass[11pt]{article}
+% Build: latexmk -pdf main.tex   (or: tectonic main.tex)
+% Figures are already rendered to PDF. figures/make_figures.py redraws them from figures/data/.
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{caption}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,
+  frame=single,framerule=0.4pt,rulecolor=\color{black!35},xleftmargin=4pt,xrightmargin=4pt,
+  breakindent=0pt}
+
+\title{Is Hindsight Really 20/20?}
+\author{Benjamin Ebanks}
+\date{November 5, 2026}
+
+\begin{document}
+\maketitle
+
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+{\small
+\bibliographystyle{plainnat}
+\bibliography{references}
+}
+
+
+\end{document}

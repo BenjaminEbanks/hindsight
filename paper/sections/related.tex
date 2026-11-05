@@ -1,0 +1,14 @@
+\section{Related Work}
+\label{sec:related}
+
+Exploring this problem turned up several research avenues aimed at the gaps and limitations of coding agents and their harnesses as they stand today. A few of them shaped this project directly.
+
+The first is proactivity. Bui and Evangelopoulos at Google Labs argue that agentic coding needs proactivity as well as autonomy, with agents that ``may notice drift, uncertainty, or emerging opportunities before being asked''~\cite{bui2026proactivity}. They also treat human attention as a cost, saying an agent should avoid messages ``whose value is lower than their attention cost.'' Hindsight shares that view, and it is why so much of the design is about when to stay quiet.
+
+The second is how agents respond to changes they didn't make. SWE-Touch benchmarks coding agents when users edit the code during a task~\cite{tan2026swetouch}. Conflicting edits lowered the average resolve rate on SWE-bench Verified by 7.7 percentage points, while helpful edits barely changed it, and 63.3\% of the audited failures ended with the conflict still in place. This matters here because a background design is also a change that arrives from outside the main agent's own work, so how the main agent reconciles it sits at the center of how the two systems interact.
+
+The third is review. In Karpathy's llm-council, models give independent opinions, review each other anonymously, and a chairman decides~\cite{karpathy2025council}. It raises the questions any review step has to face: is the output of the review actually good, has it really been tested, and how can it be audited? The council was the inspiration for the review and return stage of Hindsight.
+
+FeatureLoop offers a useful caution about the premise itself. Across 12 models, giving agents the full specification upfront led to 40.3\% success, against 51.6\% with progressive requests and 64.1\% with progressive requests plus correction~\cite{feng2026featureloop}. Giving an agent every requirement at the start may not be the full solution. That is one reason Hindsight doesn't replace the main agent, which keeps what it learned along the way and uses the redesign only as an addition to it.
+
+Hindsight differs from this work in where it looks and who it answers to. It looks backward at a live session, and instead of working on the next request it asks what should have been built given everything so far. Nobody has to invoke it, and its output goes to another agent as a suggestion rather than to the user as a finished change.

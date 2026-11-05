@@ -1,0 +1,17 @@
+{
+  "items": [
+    {"sku": "BOLT", "name": "Bolt M6", "unit_cost_cents": 12, "reorder_point": 50},
+    {"sku": "NUT", "name": "Nut M6", "unit_cost_cents": 8, "reorder_point": 50}
+  ],
+  "movements": [
+    {"kind": "receive", "qty": 200, "ref": "po-77", "sku": "BOLT"},
+    {"kind": "receive", "qty": 90, "ref": "po-77", "sku": "NUT"},
+    {"kind": "reserve", "qty": 30, "ref": "order:1", "sku": "BOLT"}
+  ],
+  "next_order_id": 2,
+  "on_hand": {"BOLT": 200, "NUT": 90},
+  "orders": [
+    {"customer": "acme", "id": 1, "lines": {"BOLT": 30}, "status": "open"}
+  ],
+  "reserved": {"BOLT": 30, "NUT": 0}
+}

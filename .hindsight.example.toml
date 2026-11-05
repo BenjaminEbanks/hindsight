@@ -1,0 +1,51 @@
+# Hindsight settings for one project. `hindsight init` copies this to .hindsight.toml.
+# Keep keys out of this file: it only names the environment variables that hold them.
+
+[project]
+test_command    = "python -m pytest -q"    # run in the boxes, and after adopting a design
+install_command = "pip install -e '.[dev]'"
+exclude         = [".env*", "*.pem", "data/", "*.sqlite"]   # never copied to a box
+max_file_mb     = 5
+
+[budget]                # estimates from token counts, not your provider's bill
+per_session_usd = 15
+per_day_usd     = 40
+
+[models]
+# Who serves the models. The default is Sail inference, using SAIL_API_KEY.
+# To use another provider with an OpenAI-compatible API, set these three:
+#
+#   provider    = "openrouter"                     # any label
+#   base_url    = "https://openrouter.ai/api/v1"   # must be https and public
+#   api_key_env = "OPENROUTER_API_KEY"             # the variable holding the key
+#
+# Then run `hindsight box-key`, which lets workers use that key without holding it.
+# If you've run it before for another provider, also set box_policy to a new name.
+
+# Which model fills each role. Use the names your provider uses.
+worker   = "zai-org/GLM-5.3"         # workers and the final worker
+reviewer = "moonshotai/Kimi-K3"      # detector and auditor
+judge    = "moonshotai/Kimi-K3"      # critics and chairman
+nudge    = "zai-org/GLM-5.3-Flash"   # one-sentence summary of a delivery
+
+# Prices for the budget, in USD per million tokens as [input, output], matched on part of
+# the model's name. Models not listed here or in hindsight/budget.py cost [1.0, 5.0].
+# [models.prices]
+# "my-model" = [0.5, 1.5]
+
+[explore]
+worker_wall_clock_minutes = 45
+max_concurrent_boxes      = 8
+
+[council]
+reviewers = 3                 # critics per run; 0 skips them
+one_run_at_a_time = true      # new messages go to the running workers instead
+stream_worker_updates = true
+
+[experiments]
+workers_max = 8               # most workers in a run, including the open worker
+winner_box_ttl_hours = 24     # how long the final worker's box sleeps, for questions
+
+[adopt]
+mode            = "working-tree"   # the only mode built so far
+post_adopt_test = true

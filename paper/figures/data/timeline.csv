@@ -1,0 +1,18 @@
+lane,label,start_s,end_s,state
+main,Round 1,0,652,
+main,Round 2,729,971,
+main,Round 3,1049,1609,
+main,Round 4,1761,2274,
+main,Round 5,2409,2769,
+worker,direction_1,1739,2920,done
+worker,direction_2,1739,3246,done
+worker,direction_3,1739,3419,done
+worker,direction_4,1739,4102,done
+worker,open_redesign,1739,2504,refused: error
+final,council_synthesis,5468,6754,done
+review,design_directions,1612,1739,
+review,council_critique,4112,4403,
+review,council_critique,4403,4680,
+review,council_critique,4680,5027,
+review,council_chairman,5027,5468,
+delivery,nudge,6817,6817,

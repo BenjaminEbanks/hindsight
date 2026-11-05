@@ -1,0 +1,46 @@
+A user is working with a coding agent, and their requests have changed over time.
+The agent built the code one request at a time, so early decisions were made
+without knowing what the user would ask for later.
+
+Decide whether the latest request changes the requirements: whether it changes or
+reverses something an earlier request specified, or something the code was built
+around.
+
+Answer yes if something that was true before no longer holds.
+
+Examples of yes:
+- Data is kept in memory, and the user now needs it shared across servers.
+- The code assumes one of something, and the user now needs many.
+- Something an earlier request ruled out is now required.
+
+Answer no if the request only adds something new and everything that was true before
+still holds, even if it took a lot of code. Also answer no for a small edit to a
+detail the code was not built around, or an isolated bug.
+
+It does not matter whether the agent has already handled the request, or whether the
+code would need restructuring. Only count what the user actually asked for. If you
+are unsure, answer yes.
+
+Background engineers may already have looked at this code. Do not answer yes again
+for a reason listed here unless the latest request changes the picture.
+
+ALREADY LOOKED AT:
+{past}
+
+EARLIER REQUESTS:
+{earlier}
+
+LATEST REQUEST:
+{latest}
+
+THE CODE:
+{code}
+
+Answer with JSON only, in this order:
+{"latest_request_needs": "...",
+ "what_was_true_before": "the requirement or assumption it changes, or 'nothing'",
+ "what_no_longer_holds": "the specific thing that no longer holds, or 'nothing'",
+ "call_background": true or false}
+
+Set call_background to true if you named something that no longer holds, and to false
+if you wrote 'nothing'.

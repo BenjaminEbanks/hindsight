@@ -1,0 +1,44 @@
+\section{Evaluation and Early Results}
+\label{sec:results}
+
+A natural next step once the system was built was evaluating whether or not Hindsight was actually useful. This section walks through what was tried, why each approach gave way to the next, and a first comparison against an agent working alone.
+
+\subsection{Starting with synthetic tasks}
+
+The first tasks were synthetic projects given to the agents with simple evolving requirements, like an expense log that had to adjust to show the purchases behind its totals. This proved not to be a great evaluation, as the requirement changes were too small to need a real redesign, and bugs in the tasks and the system’s own pipeline muddied the results.
+
+\subsection{Moving to public benchmarks}
+
+SlopCodeBench~\cite{orlanski2026slopcode} became the main benchmark because of how closely it matches the problem. An agent extends its own code through a sequence of specifications, and it is graded with hidden tests plus two quality scores, verbosity and structural erosion. Fitting a background system into it still forced a choice about what was really being measured:
+
+\begin{itemize}[nosep]
+  \item \textbf{Time.} This was the biggest issue. Benchmarks assume the next request can arrive whenever the agent finishes. A median round took 10 to 26 minutes, while a background run took about 1.5 to 2 hours, so a benchmark that doesn't wait mostly measures lateness. The runner can hold the next request until a design arrives, which tests whether a design helps when it lands in time, and every hold is recorded because a real user wouldn't wait.
+  \item \textbf{What the scores reward.} Adding tests alone moved verbosity from .28 to .14 on unchanged code, so quality is re-scored without test files. Hidden tests reward behavior, while Hindsight aims at structure, so a good redesign may not move them at all.
+  \item \textbf{The user and the conversation.} A custom runner keeps the conversation across rounds, as in a real session, so scores can't be compared with published leaderboards. A simulated user answers the agent's recommendations and always agrees, which says nothing about real users.
+  \item \textbf{Noise.} Identical agents on the same task can differ a lot: the median difference between copies was .156 in erosion. One run per task can only detect a large effect.
+\end{itemize}
+
+\subsection{Comparing four setups}
+
+The last run was a small experiment to test the value of Hindsight. Ten SlopCodeBench tasks were drawn at random and run in four setups, with the plan written down beforehand: the agent alone (A), Hindsight forced at each task's middle round (B), and Hindsight whenever the detector says yes, with the next request either arriving on schedule (C) or held until the background run ends (D).
+
+No setup clearly beat the agent working alone (Table~\ref{tab:compare}). Each won about half the tasks on most scores, and D's lead on verbosity, 7 of 9, was the same after the first round, before any design existed. Designs still reached the agent 23 times, and in some cases they helped: several found real bugs that the agent confirmed and fixed, and it took a whole design about 6 times and part of one about 11 times. It also judged them critically. On \code{metric_transform_lang} in C, where requests didn't wait, it turned a design down because it was ``two messages stale'' and ``would have destroyed the finished Part 4/5 work.'' On \code{pwd_manager} in D, it recommended ``Adopt all of it'' and then applied the design without waiting for the user, a reminder that the instruction to wait isn't enough on its own.
+
+The experiment has clear limits. Each task ran once per setup, and single runs differ about as much as the setups did, so a much bigger sample is needed before anything can be said about quality. The simulated user always agreed, every role used the same model, the tasks had been seen in earlier runs, and holding requests until a design arrives is not what a real user would do. The scores also reward behavior more than structure, which is what Hindsight is trying to improve.
+
+\begin{table}[t]
+  \centering
+  \small
+  \begin{tabular}{@{}l c c c c@{}}
+    \toprule
+    & \textbf{Designs} & & & \textbf{Hidden} \\
+    \textbf{Setup} & \textbf{delivered} & \textbf{Erosion} & \textbf{Verbosity} & \textbf{tests} \\
+    \midrule
+    B. Forced, waits & 7 & 5 of 9 & 5 of 9 & 4 of 9 \\
+    C. Detector, on schedule & 6 & 5 of 9 & 7 of 9 & 2 of 9 \\
+    D. Detector, waits & 10 & 4 of 9 & 7 of 9 & 4 of 9 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Tasks where each setup did better than the agent working alone, out of the nine scored in every setup. Erosion measures how much complexity piles up in a few places, verbosity measures repeated and padded code, and both are scored without test files at the end of the session, where lower is better. Hidden tests are the benchmark's tests, where more passing is better.}
+  \label{tab:compare}
+\end{table}

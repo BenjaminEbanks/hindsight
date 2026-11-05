@@ -1,0 +1,46 @@
+{
+  "id": "cache",
+  "title": "A cache that outgrows its unsynchronized miss path",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# cache\n\nTiny value cache. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "need a tiny cache for our service. cache.py: a Cache \u2014 get_or_load(key, loader) returns the cached value for a key, or calls loader() and keeps the result; get(key) peeks without loading (None if it isn't there); size() counts the entries. tests pls",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Cache with get_or_load(key, loader), get(key), size()"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "we're serving requests from a few threads now. if a key's loader is slow the others shouldn't pile onto it \u2014 while one thread is loading a key, the rest should wait for that value instead of calling loader again.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "get_or_load is single-flight per key under concurrent access: loader runs at most once per key even when threads race"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_single_flight.py": "import threading\nimport time\n\nfrom cache import Cache\n\n\ndef test_one_load_in_flight_per_key():\n    calls = []\n    entered = threading.Event()\n    release = threading.Event()\n\n    def loader():\n        calls.append(1)\n        entered.set()\n        release.wait(timeout=5)\n        return {\"v\": 42}\n\n    cache = Cache()\n    results = {}\n\n    def first():\n        results[\"a\"] = cache.get_or_load(\"k\", loader)\n\n    t1 = threading.Thread(target=first)\n    t1.start()\n    assert entered.wait(timeout=2), \"loader was never called\"\n\n    started_second = threading.Event()\n\n    def second():\n        started_second.set()\n        results[\"b\"] = cache.get_or_load(\"k\", loader)\n\n    t2 = threading.Thread(target=second)\n    t2.start()\n    started_second.wait(timeout=2)\n    try:\n        time.sleep(0.1)  # every chance to misbehave\n        assert len(calls) == 1, (\n            f\"loader called {len(calls)} times for one key while a \"\n            \"load was already in flight\")\n    finally:\n        release.set()\n    t1.join(timeout=5)\n    t2.join(timeout=5)\n    assert not t1.is_alive() and not t2.is_alive()\n    assert len(calls) == 1\n    assert results[\"a\"] == results[\"b\"] == {\"v\": 42}\n\n\ndef test_hits_do_not_reload():\n    cache = Cache()\n    n = []\n\n    def loader():\n        n.append(1)\n        return \"value\"\n\n    assert cache.get_or_load(\"x\", loader) == \"value\"\n    assert cache.get_or_load(\"x\", loader) == \"value\"\n    assert cache.get(\"x\") == \"value\"\n    assert cache.get(\"missing\") is None\n    assert cache.size() == 1\n    assert len(n) == 1\n"
+      }
+    },
+    {
+      "message": "also it grows forever. Cache(maxsize=...) should keep at most that many entries and evict the least recently used \u2014 a get counts as a use.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "optional maxsize bounds the cache with least-recently-used eviction; gets refresh recency"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_lru.py": "from cache import Cache\n\n\ndef test_lru_evicts_least_recently_used():\n    cache = Cache(maxsize=2)\n    cache.get_or_load(\"a\", lambda: 1)\n    cache.get_or_load(\"b\", lambda: 2)\n    cache.get(\"a\")  # a was used more recently than b\n    cache.get_or_load(\"c\", lambda: 3)\n    assert cache.get(\"b\") is None\n    assert cache.get(\"a\") == 1\n    assert cache.get(\"c\") == 3\n    assert cache.size() == 2\n"
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "notify",
+  "title": "A notifier that outgrows its send-once world",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# notify\n\nNotification sender. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "notify.py: a Notifier that takes a sender callable \u2014 we plug in whatever actually delivers the message \u2014 and notify(user, message) calls sender(user, message). That's really it. Tests.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "Notifier(sender) with notify(user, message) calling the sender"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "We moved onto a queue that redelivers messages when handlers are slow, so notify may get called twice for the same delivery. Each delivery comes with an id: notify(user, message, delivery_id=...). If we've already seen that id, skip the send. Calls with no id are still fine and always send. It'd also be handy if notify tells us whether it actually sent (True) or skipped (False).",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "notify(user, message, delivery_id) sends at most once per delivery_id; returns True if sent, False if a redelivery was skipped"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_dedup.py": "from notify import Notifier\n\n\ndef test_same_delivery_id_is_sent_once():\n    sent = []\n    n = Notifier(lambda u, m: sent.append((u, m)))\n    assert n.notify(\"alice\", \"hi\", delivery_id=\"d1\") is True\n    assert n.notify(\"alice\", \"hi\", delivery_id=\"d1\") is False  # redelivery\n    assert sent == [(\"alice\", \"hi\")]\n    assert n.notify(\"alice\", \"hi\", delivery_id=\"d2\") is True  # a new delivery\n    assert len(sent) == 2\n\n\ndef test_without_delivery_id_it_always_sends():\n    sent = []\n    n = Notifier(lambda u, m: sent.append((u, m)))\n    n.notify(\"bob\", \"hello\")\n    n.notify(\"bob\", \"hello\")\n    assert len(sent) == 2\n"
+      }
+    },
+    {
+      "message": "The SMTP gateway flakes now and then. Retry a failed send up to 2 times. But careful: a send that already went out must never repeat for the same delivery id, and a delivery that keeps failing should raise the last error and shouldn't be remembered as done \u2014 the queue will redeliver it later and it should go out then. Everything else \u2014 the dedup rule and the True/False return \u2014 still means the same as before.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "failed sends are retried up to 2 times; only a successful send marks a delivery_id as done"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_retry.py": "import pytest\n\nfrom notify import Notifier\n\n\nclass FlakySender:\n    def __init__(self, fail_first):\n        self.calls = 0\n        self._fail_first = fail_first\n\n    def __call__(self, user, message):\n        self.calls += 1\n        if self.calls <= self._fail_first:\n            raise RuntimeError(\"smtp down\")\n\n\ndef test_retry_then_success_is_remembered():\n    s = FlakySender(1)\n    n = Notifier(s)\n    assert n.notify(\"a\", \"m\", delivery_id=\"x\") is True\n    assert s.calls == 2  # one failure, one retry that worked\n    assert n.notify(\"a\", \"m\", delivery_id=\"x\") is False\n    assert s.calls == 2  # it already went out: never again\n\n\ndef test_failed_delivery_is_not_marked_done():\n    s = FlakySender(3)  # more failures than retries\n    n = Notifier(s)\n    with pytest.raises(RuntimeError):\n        n.notify(\"a\", \"m\", delivery_id=\"y\")\n    assert s.calls == 3  # one try plus two retries, then give up\n    assert n.notify(\"a\", \"m\", delivery_id=\"y\") is True  # not remembered\n    assert s.calls == 4\n    assert n.notify(\"a\", \"m\", delivery_id=\"y\") is False\n    assert s.calls == 4\n"
+      }
+    }
+  ]
+}

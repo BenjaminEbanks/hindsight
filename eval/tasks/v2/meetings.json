@@ -1,0 +1,46 @@
+{
+  "id": "meetings",
+  "title": "A meeting scheduler that outgrows its single-office design",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# meetings\n\nTeam calendar helper. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "Build a tiny meeting scheduler for our team calendar, scheduler.py: a Scheduler class \u2014 cal.add(title, when) where when looks like '2026-03-05 14:00', and cal.list() returns (title, when) pairs, soonest first. Just us for now, one office. Write tests for it.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "scheduler.py with a Scheduler class: add(title, when) taking 'YYYY-MM-DD HH:MM' strings; list() returns (title, when) pairs sorted by time"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Thanks, this has been working great. Update: we hired two people in Berlin and they keep missing meetings. Can meetings carry a timezone when we add them, like add(title, when, tz='America/New_York')? And list() should be able to show everything in whatever timezone we ask for, like list(tz='Europe/Berlin'). If someone adds a meeting without a tz, assume New York, that's where the office is. list() with no tz shows each meeting in its own timezone, and keep times in the same 'YYYY-MM-DD HH:MM' shape.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "meetings carry a timezone (default America/New_York); list(tz=...) converts; list() without a tz displays in the meeting's own timezone"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_tz.py": "from scheduler import Scheduler\n\n\ndef test_meetings_convert_between_timezones():\n    s = Scheduler()\n    s.add(\"kickoff\", \"2026-03-05 14:00\", tz=\"America/New_York\")\n    assert s.list(tz=\"Europe/Berlin\") == [(\"kickoff\", \"2026-03-05 20:00\")]\n    assert s.list(tz=\"UTC\") == [(\"kickoff\", \"2026-03-05 19:00\")]\n\n\ndef test_default_tz_and_sorted_display():\n    s = Scheduler()\n    s.add(\"retro\", \"2026-03-05 15:00\")  # no tz: the New York office\n    s.add(\"review\", \"2026-03-05 14:00\", tz=\"Europe/Berlin\")\n    # no display tz: each meeting shows in its own timezone\n    assert s.list() == [(\"review\", \"2026-03-05 14:00\"),\n                        (\"retro\", \"2026-03-05 15:00\")]\n    assert s.list(tz=\"UTC\") == [(\"review\", \"2026-03-05 13:00\"),\n                                (\"retro\", \"2026-03-05 20:00\")]\n"
+      }
+    },
+    {
+      "message": "One more thing: we have a daily standup. add(..., repeat='daily') should mark a meeting as daily, and next_dates(title, n) returns n occurrences as 'YYYY-MM-DD HH:MM' strings, starting from the date the meeting was added with \u2014 next_dates(title, n, tz=...) if we want them somewhere else. The standup is at 9 for the New York folks, and it should stay at 9 for them no matter what the clocks do.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "daily repeats keep the meeting's local wall time across DST changes; next_dates(title, n, tz=None) returns n occurrence strings starting from the meeting's own date, in the meeting's tz or a requested one"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_dst.py": "from scheduler import Scheduler\n\n\ndef test_daily_standup_keeps_local_time_across_dst():\n    s = Scheduler()\n    s.add(\"standup\", \"2026-03-07 09:00\", tz=\"America/New_York\",\n          repeat=\"daily\")\n    assert s.next_dates(\"standup\", 4) == [\n        \"2026-03-07 09:00\", \"2026-03-08 09:00\",\n        \"2026-03-09 09:00\", \"2026-03-10 09:00\",\n    ]\n\n\ndef test_daily_standup_in_utc_shifts_with_dst():\n    s = Scheduler()\n    s.add(\"standup\", \"2026-03-07 09:00\", tz=\"America/New_York\",\n          repeat=\"daily\")\n    assert s.next_dates(\"standup\", 2, tz=\"UTC\") == [\n        \"2026-03-07 14:00\", \"2026-03-08 13:00\",\n    ]\n"
+      }
+    }
+  ]
+}

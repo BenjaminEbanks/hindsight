@@ -1,0 +1,46 @@
+{
+  "id": "bookmarks",
+  "title": "A bookmark store that outgrows its first file format",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# bookmarks\n\nLink saver. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "bookmarks.py: a BookmarkStore \u2014 add(title, url), entries() returning the saved links as (title, url) tuples in the order added, and save(path)/load(path) to a JSON file so they survive restarts (load(path) should work directly on the class: BookmarkStore.load(path)). Keep the file format simple. Tests.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "BookmarkStore with add(title, url), entries() returning (title, url) tuples, save(path)/load(path) as JSON with load callable on the class"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Let's group them into folders: add(title, url, folder=...) with 'general' as the default, folders() listing the folder names, and entries(folder) for just one folder. entries() with nothing still lists everything. The file format is yours to change.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "bookmarks live in folders (default 'general'); folders() and entries(folder); entries() lists everything"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_folders.py": "from bookmarks import BookmarkStore\n\n\ndef test_folders_round_trip(tmp_path):\n    store = BookmarkStore()\n    store.add(\"docs\", \"https://docs.example\")\n    store.add(\"tickets\", \"https://tickets.example\", folder=\"work\")\n    store.add(\"wiki\", \"https://wiki.example\", folder=\"work\")\n    assert store.folders() == [\"general\", \"work\"]\n    assert store.entries(\"work\") == [\n        (\"tickets\", \"https://tickets.example\"),\n        (\"wiki\", \"https://wiki.example\"),\n    ]\n    assert len(store.entries()) == 3\n    p = tmp_path / \"bm.json\"\n    store.save(str(p))\n    loaded = BookmarkStore.load(str(p))\n    assert loaded.entries(\"work\") == store.entries(\"work\")\n    assert loaded.folders() == [\"general\", \"work\"]\n"
+      }
+    },
+    {
+      "message": "Ugh, of course our beta users already have save files from the first version \u2014 the flat list of {title, url}, same as what you started with. load() has to handle those too. Going forward, save whatever format you like, just don't break the old files.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "load() accepts both the current format and the old flat-list format (migration)"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_old_files.py": "import json\n\nfrom bookmarks import BookmarkStore\n\n\ndef test_beta_files_still_load(tmp_path):\n    old = tmp_path / \"beta.json\"\n    old.write_text(json.dumps([\n        {\"title\": \"a\", \"url\": \"https://a\"},\n        {\"title\": \"b\", \"url\": \"https://b\"},\n    ]))\n    store = BookmarkStore.load(str(old))\n    assert store.entries() == [(\"a\", \"https://a\"), (\"b\", \"https://b\")]\n    assert store.folders() == [\"general\"]\n\n\ndef test_migrated_files_survive_another_save(tmp_path):\n    # The agent owns the current file format (\"save whatever format you\n    # like\"), so this goes through its own save(), never a literal format.\n    old = tmp_path / \"beta.json\"\n    old.write_text(json.dumps([{\"title\": \"a\", \"url\": \"https://a\"}]))\n    store = BookmarkStore.load(str(old))\n    store.add(\"t\", \"https://t\", folder=\"work\")\n    new = tmp_path / \"new.json\"\n    store.save(str(new))\n    again = BookmarkStore.load(str(new))\n    assert again.entries(\"work\") == [(\"t\", \"https://t\")]\n    assert again.entries(\"general\") == [(\"a\", \"https://a\")]\n    assert sorted(again.folders()) == [\"general\", \"work\"]\n"
+      }
+    }
+  ]
+}

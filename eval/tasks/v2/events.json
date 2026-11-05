@@ -1,0 +1,46 @@
+{
+  "id": "events",
+  "title": "A log reader that outgrows its read-everything design",
+  "no_change": false,
+  "test_command": "python3 -m pytest -q",
+  "hidden_test_command": "uv run --no-project --with pytest python -m pytest -q {hidden_dir}",
+  "initial_repo": {
+    "README.md": "# events\n\nLog file reader. See git history for the design conversation.\n"
+  },
+  "stages": [
+    {
+      "message": "events.py: read_events(path) reads our log files \u2014 one event per line, formatted 'LEVEL|message' \u2014 and returns a list of dicts with 'level' and 'message'. Write tests.",
+      "requirements": [
+        {
+          "id": "R1",
+          "text": "read_events(path) parses 'LEVEL|message' lines into a list of {'level', 'message'} dicts"
+        }
+      ],
+      "hidden_tests": {}
+    },
+    {
+      "message": "Log files got huge and we usually only want the first few events. Can we get iterate(source) that yields events one at a time instead of building the whole list? It should also take an already-open file, the uploader hands us those. read_events can stay as it is.",
+      "requirements": [
+        {
+          "id": "R2",
+          "text": "iterate(source) yields parsed events lazily, accepts a path or an open file object; read_events keeps working"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage2_lazy.py": "from events import iterate, read_events\n\n\nclass FakeFile:\n    \"\"\"File-like object that counts how much of it has been read.\"\"\"\n\n    def __init__(self, lines):\n        self._lines = list(lines)\n        self._i = 0\n        self.lines_read = 0\n        self.read_everything = False\n\n    def readline(self):\n        if self._i >= len(self._lines):\n            return \"\"\n        line = self._lines[self._i]\n        self._i += 1\n        self.lines_read += 1\n        return line + \"\\n\"\n\n    def __iter__(self):\n        return self\n\n    def __next__(self):\n        line = self.readline()\n        if line == \"\":\n            raise StopIteration\n        return line\n\n    def read(self):\n        self.read_everything = True\n        rest = self._lines[self._i:]\n        self._i = len(self._lines)\n        self.lines_read = len(self._lines)\n        return \"\".join(x + \"\\n\" for x in rest)\n\n    def readlines(self):\n        return [x + \"\\n\" for x in self.read().splitlines()]\n\n\ndef test_iterate_reads_one_line_at_a_time():\n    fake = FakeFile(f\"INFO|msg {i}\" for i in range(10000))\n    it = iterate(fake)\n    first = next(it)\n    assert first == {\"level\": \"INFO\", \"message\": \"msg 0\"}\n    assert fake.lines_read <= 2, (\n        f\"read {fake.lines_read} lines to yield one event\")\n    assert not fake.read_everything, \"iterate slurped the whole file\"\n\n\ndef test_iterate_takes_paths_and_read_events_still_works(tmp_path):\n    p = tmp_path / \"a.log\"\n    p.write_text(\"ERROR|boom\\nINFO|ok\\n\")\n    assert list(iterate(str(p))) == [\n        {\"level\": \"ERROR\", \"message\": \"boom\"},\n        {\"level\": \"INFO\", \"message\": \"ok\"},\n    ]\n    assert read_events(str(p)) == [\n        {\"level\": \"ERROR\", \"message\": \"boom\"},\n        {\"level\": \"INFO\", \"message\": \"ok\"},\n    ]\n"
+      }
+    },
+    {
+      "message": "One more thing: a level filter on iterate, like iterate(source, level='ERROR'). Still one at a time \u2014 we stop reading the file as soon as we've got what we need.",
+      "requirements": [
+        {
+          "id": "R3",
+          "text": "iterate(source, level=...) filters by level without reading ahead"
+        }
+      ],
+      "hidden_tests": {
+        "test_stage3_filter.py": "from events import iterate\n\n\nclass FakeFile:\n    def __init__(self, lines):\n        self._lines = list(lines)\n        self._i = 0\n        self.lines_read = 0\n        self.read_everything = False\n\n    def readline(self):\n        if self._i >= len(self._lines):\n            return \"\"\n        line = self._lines[self._i]\n        self._i += 1\n        self.lines_read += 1\n        return line + \"\\n\"\n\n    def __iter__(self):\n        return self\n\n    def __next__(self):\n        line = self.readline()\n        if line == \"\":\n            raise StopIteration\n        return line\n\n    def read(self):\n        self.read_everything = True\n        rest = self._lines[self._i:]\n        self._i = len(self._lines)\n        self.lines_read = len(self._lines)\n        return \"\".join(x + \"\\n\" for x in rest)\n\n    def readlines(self):\n        return [x + \"\\n\" for x in self.read().splitlines()]\n\n\ndef test_filtered_iteration_stays_lazy():\n    lines = []\n    for i in range(5000):\n        lines.append(f\"ERROR|e{i}\" if i % 50 == 0 else f\"INFO|i{i}\")\n    fake = FakeFile(lines)\n    got = []\n    for event in iterate(fake, level=\"ERROR\"):\n        got.append(event)\n        if len(got) == 3:\n            break\n    assert [e[\"message\"] for e in got] == [\"e0\", \"e50\", \"e100\"]\n    assert fake.lines_read < 500, (\n        f\"read {fake.lines_read} lines to find three errors\")\n    assert not fake.read_everything\n"
+      }
+    }
+  ]
+}
